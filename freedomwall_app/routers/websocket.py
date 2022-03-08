@@ -20,9 +20,7 @@ router = APIRouter()
 async def websocket_endpoint(ws: WebSocket, db: Session = Depends(get_db)):
     log.info(msg="Accepting client connection...")
     await ws.accept()
-    i = 0
     while True:
-        
         try:
             # get all posts
             posts = crud.get_all_posts(db, creator=None, title=None)
@@ -42,9 +40,10 @@ async def websocket_endpoint(ws: WebSocket, db: Session = Depends(get_db)):
                         "comments": [comment.__dict__ for comment in post.comments],
                     }
                 )
-            
-            await ws.send_json(jsonable_encoder(postsJson))
-            await asyncio.sleep(60 * 5)  # sleep for 5 mins
+            x = jsonable_encoder(postsJson)
+            await ws.send_json(x)
+            await asyncio.sleep(10)
+            # await asyncio.sleep(60 * 1)  # sleep for 5 mins
 
         except Exception as e:
             log.exception(msg=e)

@@ -1,5 +1,6 @@
 from typing import Optional
 from sqlalchemy.orm import Session
+from sqlalchemy import desc
 from fastapi import HTTPException, status
 from . import models,schemas
 
@@ -11,17 +12,17 @@ class Action(str,Enum):
 
 def get_all_posts(db:Session,creator:Optional[str],title:Optional[str]):
     if(creator and title):
-            return db.query(models.Post).filter(models.Post.creator == creator).filter(models.Post.title == title).all()
+            return db.query(models.Post).filter(models.Post.creator == creator).filter(models.Post.title == title).order_by(desc(models.Post.date_created)).all()
 
     elif(creator or title):
         if(creator):        
-            return db.query(models.Post).filter(models.Post.creator == creator).all()
+            return db.query(models.Post).filter(models.Post.creator == creator).order_by(desc(models.Post.date_created)).all()
 
         else:
-            return db.query(models.Post).filter(models.Post.title == title).all()
+            return db.query(models.Post).filter(models.Post.title == title).order_by(desc(models.Post.date_created)).all()
 
     else:
-        return db.query(models.Post).all()
+        return db.query(models.Post).order_by(desc(models.Post.date_created)).all()
 
 def get_post(db:Session, post_id: int):
     post = db.query(models.Post).filter(models.Post.id == post_id).first()
