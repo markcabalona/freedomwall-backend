@@ -25,9 +25,9 @@ async def websocket_endpoint(ws: WebSocket, db: Session = Depends(get_db)):
             # get all posts
             posts = crud.get_all_posts(db, creator=None, title=None)
             postsJson = []
-
-            # convert posts into dictionaries
+            # db.commit()
             for post in posts:
+                db.refresh(post)
                 postsJson.append(
                     {
                         "id": post.id,
@@ -40,9 +40,9 @@ async def websocket_endpoint(ws: WebSocket, db: Session = Depends(get_db)):
                         "comments": [comment.__dict__ for comment in post.comments],
                     }
                 )
-            x = jsonable_encoder(postsJson)
-            await ws.send_json(x)
-            await asyncio.sleep(10)
+            json = jsonable_encoder(postsJson)
+            await ws.send_json(json)
+            await asyncio.sleep(1)
             # await asyncio.sleep(60 * 1)  # sleep for 5 mins
 
         except Exception as e:

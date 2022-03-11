@@ -1,3 +1,4 @@
+import logging
 from typing import List
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
@@ -17,7 +18,9 @@ def all_comments(post_id:int,db:Session = Depends(get_db)):
     
 @router.post('/{post_id}/comment',status_code=status.HTTP_201_CREATED,response_model=schemas.Comment)
 def create_comment(request: schemas.CommentCreate,post_id:int,db: Session =Depends(get_db)):
-    return crud.create_comment(db, request,post_id)
+    new = crud.create_comment(db, request,post_id)
+    print(new.__dict__)
+    return new
 
 @router.get('/{post_id}/comment/{id}',response_model=schemas.Post)
 def get_comment(id:int,post_id:int, db:Session =Depends(get_db)):

@@ -27,6 +27,6 @@ def get_post_by_id(id:int, db:Session =Depends(get_db)):
 def delete_post(id:int, db:Session=Depends(get_db)):
     return crud.delete_post(db,id)
 
-@router.put('/{action}/{id}',status_code=status.HTTP_202_ACCEPTED,response_model=schemas.Post)
+@router.put('/{id}',status_code=status.HTTP_202_ACCEPTED,response_model=schemas.Post)
 def like_or_dislike_post(id:int,action:crud.Action, db:Session =Depends(get_db)):
     return crud.like_dislike_post(db,id,action)
