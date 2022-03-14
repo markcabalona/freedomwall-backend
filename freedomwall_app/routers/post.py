@@ -17,7 +17,7 @@ def get_all_posts(creator:Optional[str] = None,title:Optional[str] = None, db:Se
 
 @router.post('/',status_code=status.HTTP_201_CREATED,response_model=schemas.Post)
 def create_post(request: schemas.PostCreate,db: Session =Depends(get_db)):
-    return crud.create_post(db, request)
+    return crud.create_post(db = db, post = request)
 
 @router.get('/{id}',response_model=schemas.Post)
 def get_post_by_id(id:int, db:Session =Depends(get_db)):

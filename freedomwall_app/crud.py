@@ -12,7 +12,7 @@ class Action(str, Enum):
     like = "likes++"
     un_like = "likes--"
     dislike = "dislikes++"
-    un_dislike = "dislike--"
+    un_dislike = "dislikes--"
 
 
 def get_all_posts(db: Session, creator: Optional[str], title: Optional[str]):

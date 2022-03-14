@@ -1,2 +1,4 @@
+.gitignore
 .vscode
 data.db
+/freedomwall_app/websockets

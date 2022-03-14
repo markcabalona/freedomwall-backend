@@ -42,7 +42,7 @@ async def websocket_endpoint(ws: WebSocket, db: Session = Depends(get_db)):
                 )
             json = jsonable_encoder(postsJson)
             await ws.send_json(json)
-            await asyncio.sleep(1)
+            await asyncio.sleep(0.2)
             # await asyncio.sleep(60 * 1)  # sleep for 5 mins
 
         except Exception as e:
