@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 import json as json
 
 from fastapi import APIRouter, Depends, status
@@ -17,12 +17,19 @@ get_db = database.get_db
 
 
 @router.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
-    await provider.connect(websocket,connection_type=ConnectionType.ALL_POSTS_CONNECTION)
+async def websocket_endpoint(
+    websocket: WebSocket,
+    creator: Optional[str] = None,
+    title: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    await provider.connect(
+        websocket, connection_type=ConnectionType.ALL_POSTS_CONNECTION
+    )
     try:
         while True:
             await websocket.receive_text()
-            posts = crud.get_all_posts(db, creator=None, title=None)
+            posts = crud.get_all_posts(db, creator=creator, title=title)
             postsJson = []
             for post in posts:
                 db.refresh(post)
@@ -42,18 +49,25 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
             await websocket.send_json(_json)
 
     except WebSocketDisconnect:
-        await provider.remove(websocket,connection_type=ConnectionType.ALL_POSTS_CONNECTION)
+        await provider.remove(
+            websocket, connection_type=ConnectionType.ALL_POSTS_CONNECTION
+        )
 
 
-@router.websocket("/ws/posts")
-async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
+@router.websocket("/ws/post/")
+async def filtered_post_websocket(
+    websocket: WebSocket,
+    creator: Optional[str] = None,
+    title: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
     await provider.connect(
         websocket=websocket, connection_type=ConnectionType.ALL_POSTS_CONNECTION
     )
     try:
         while True:
             await websocket.receive_text()
-            posts = crud.get_all_posts(db, creator=None, title=None)
+            posts = crud.get_all_posts(db, creator=creator, title=title)
             postsJson = []
             for post in posts:
                 db.refresh(post)
@@ -76,7 +90,7 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         provider.remove(websocket, connection_type=ConnectionType.ALL_POSTS_CONNECTION)
 
 
-@router.websocket("/ws/postCreate")
+@router.websocket("/ws/post/{id}")
 async def create_post_websocket(websocket: WebSocket, db: Session = Depends(get_db)):
     await provider.connect(
         websocket=websocket, connection_type=ConnectionType.SPECIFIC_POST_CONNECTION
@@ -113,24 +127,28 @@ async def create_post(request: schemas.PostCreate, db: Session = Depends(get_db)
         params=Params(id=response.id),
         db=db,
     )
-    return {"detail": "Post Created"}
+    return response
 
 
-@router.put("/{id}", status_code=status.HTTP_202_ACCEPTED, response_model=schemas.Post)
+@router.put("/post/{id}", status_code=status.HTTP_202_ACCEPTED, response_model=schemas.Post)
 async def like_or_dislike_post(
     id: int, action: crud.Action, db: Session = Depends(get_db)
 ):
-    return crud.like_dislike_post(db, id, action)
+    response = crud.like_dislike_post(db=db, action=action,post_id=id)
+    provider.push(db=db, params=Params(id=id))
+    return response
 
 
-@router.websocket("/ws/post/")
-async def post_by_id_websocket(websocket: WebSocket, db: Session = Depends(get_db)):
+@router.websocket("/ws/post/{id}")
+async def post_by_id_websocket(
+    websocket: WebSocket, id: int, db: Session = Depends(get_db)
+):
     await provider.connect(websocket)
     try:
         while True:
             request = await websocket.receive_text()
             request_json = json.load(request)
-            post = crud.get_post(db=db, post_id=request_json["id"])
+            post = crud.get_post(db=db, post_id=id)
             db.refresh(post)
             postJson = {
                 "id": post.id,
