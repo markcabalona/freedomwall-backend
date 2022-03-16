@@ -1,8 +1,8 @@
 import imp
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from freedomwall_app.routers import post,comment,websocket
 
+from freedomwall_app.websockets import posts_websocket
 
 from freedomwall_app import models,database
 
@@ -18,6 +18,5 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(post.router)
-app.include_router(comment.router)
-app.include_router(websocket.router)
+
+app.include_router(posts_websocket.router)
