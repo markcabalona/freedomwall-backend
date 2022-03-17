@@ -44,7 +44,6 @@ class Provider:
         self.connections.remove(connection)
 
     async def _notify(self, db: Session):
-        response
         for connection in self.connections:
             if connection.params == None:
                 response = crud.get_all_posts(db=db, creator=None, title=None)
