@@ -24,7 +24,7 @@ class Provider:
     def __del__(self):
         for connection in self.connections:
             self.remove(
-                websocket=connection,
+                connection=connection,
             )
 
     async def get_notification_generator(self):
