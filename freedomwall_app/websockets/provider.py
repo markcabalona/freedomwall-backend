@@ -33,7 +33,7 @@ class Provider:
             await self._notify(db=notify_params)
 
     async def push(self, db: Session):
-        await self.generator.asend(db)
+        self.generator.asend(db)
 
     async def connect(self, connection: Connection):
         await connection.websocket.accept()

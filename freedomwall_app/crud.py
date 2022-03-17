@@ -111,6 +111,7 @@ def like_dislike_post(db: Session, post_id: int, action: str):
             post.first().__setattr__("dislikes", count - 1)
 
     db.commit()
+    db.refresh(post.first())
 
     return post.first()
 
