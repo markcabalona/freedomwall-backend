@@ -76,7 +76,7 @@ class Provider:
                         )
                 finally:
                     _json = jsonable_encoder(postsJson)
-                    await connection.send_json(_json)
+                    await connection.websocket.send_json(_json)
 
             else:
                 try:
@@ -93,7 +93,7 @@ class Provider:
                     }
                 finally:
                     _json = jsonable_encoder(postJson)
-                    await connection.send_json(_json)
+                    await connection.websocket.send_json(_json)
 
 
 provider = Provider()
