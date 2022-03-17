@@ -1,6 +1,5 @@
-from multiprocessing import connection
-from typing import List, Optional
-import json as json
+from typing import Optional
+
 
 import asyncio
 
@@ -12,7 +11,7 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from .. import crud, database, schemas
 from .parameters import Params
-from .provider import Connection, ConnectionType, provider
+from .provider import Connection, provider
 
 router = APIRouter(prefix="/post", tags=["Posts"])
 
@@ -54,6 +53,7 @@ async def websocket_endpoint(
 
     except WebSocketDisconnect:
         provider.remove(connection=connection)
+
 
 @router.websocket("/ws/post/{id}")
 async def post_by_id_websocket(

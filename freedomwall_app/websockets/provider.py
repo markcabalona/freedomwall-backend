@@ -1,7 +1,4 @@
-from ast import Param
-from enum import Enum
-from sqlite3 import connect
-from typing import Optional, List, Tuple
+from typing import Optional, List
 
 # from fastapi import Depends
 from sqlalchemy.orm import Session
