@@ -1,6 +1,8 @@
 from typing import List, Optional
 import json as json
 
+import asyncio
+
 from fastapi import APIRouter, Depends, status
 from fastapi.encoders import jsonable_encoder
 
@@ -28,7 +30,6 @@ async def websocket_endpoint(
     )
     try:
         while True:
-            await websocket.receive_text()
             posts = crud.get_all_posts(db, creator=creator, title=title)
             postsJson = []
             for post in posts:
@@ -47,6 +48,7 @@ async def websocket_endpoint(
                 )
             _json = jsonable_encoder(postsJson)
             await websocket.send_json(_json)
+            await asyncio.sleep(50)
 
     except WebSocketDisconnect:
         provider.remove(websocket, connection_type=ConnectionType.ALL_POSTS_CONNECTION)
@@ -64,7 +66,7 @@ async def filtered_post_websocket(
     )
     try:
         while True:
-            await websocket.receive_text()
+            
             posts = crud.get_all_posts(db, creator=creator, title=title)
             postsJson = []
             for post in posts:
@@ -83,6 +85,7 @@ async def filtered_post_websocket(
                 )
             _json = jsonable_encoder(postsJson)
             await websocket.send_json(_json)
+            await asyncio.sleep(50)
 
     except WebSocketDisconnect:
         provider.remove(websocket, connection_type=ConnectionType.FILTERED_POST_CONNECTION)
@@ -97,8 +100,6 @@ async def post_by_id_websocket(
     )
     try:
         while True:
-            await websocket.receive_text()
-
             post = crud.get_post(db=db, post_id=id)
             db.refresh(post)
             postJson = {
@@ -113,6 +114,7 @@ async def post_by_id_websocket(
             }
             _json = jsonable_encoder(postJson)
             await websocket.send_json(_json)
+            await asyncio.sleep(50)
 
     except WebSocketDisconnect:
         provider.remove(
