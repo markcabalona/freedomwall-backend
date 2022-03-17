@@ -1,3 +1,4 @@
+from multiprocessing import connection
 from typing import List, Optional
 import json as json
 
@@ -11,7 +12,7 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from .. import crud, database, schemas
 from .parameters import Params
-from .provider import ConnectionType, provider
+from .provider import Connection, ConnectionType, provider
 
 router = APIRouter(prefix="/post", tags=["Posts"])
 
@@ -25,9 +26,10 @@ async def websocket_endpoint(
     title: Optional[str] = None,
     db: Session = Depends(get_db),
 ):
-    await provider.connect(
-        websocket, connection_type=ConnectionType.ALL_POSTS_CONNECTION
+    connection = Connection(
+        websocket=websocket, params=Params(creator=creator, title=title)
     )
+    await provider.connect(connection=connection)
     try:
         while True:
             posts = crud.get_all_posts(db, creator=creator, title=title)
@@ -48,56 +50,17 @@ async def websocket_endpoint(
                 )
             _json = jsonable_encoder(postsJson)
             await websocket.send_json(_json)
-            await asyncio.sleep(50)
+            await asyncio.sleep(30)
 
     except WebSocketDisconnect:
-        provider.remove(websocket, connection_type=ConnectionType.ALL_POSTS_CONNECTION)
-
-
-@router.websocket("/ws/post/")
-async def filtered_post_websocket(
-    websocket: WebSocket,
-    creator: Optional[str] = None,
-    title: Optional[str] = None,
-    db: Session = Depends(get_db),
-):
-    await provider.connect(
-        websocket=websocket, connection_type=ConnectionType.FILTERED_POST_CONNECTION
-    )
-    try:
-        while True:
-            
-            posts = crud.get_all_posts(db, creator=creator, title=title)
-            postsJson = []
-            for post in posts:
-                db.refresh(post)
-                postsJson.append(
-                    {
-                        "id": post.id,
-                        "creator": post.creator,
-                        "title": post.title,
-                        "content": post.content,
-                        "date_created": post.date_created,
-                        "likes": post.likes,
-                        "dislikes": post.dislikes,
-                        "comments": [comment.__dict__ for comment in post.comments],
-                    }
-                )
-            _json = jsonable_encoder(postsJson)
-            await websocket.send_json(_json)
-            await asyncio.sleep(50)
-
-    except WebSocketDisconnect:
-        provider.remove(websocket, connection_type=ConnectionType.FILTERED_POST_CONNECTION)
-
+        provider.remove(connection=connection)
 
 @router.websocket("/ws/post/{id}")
 async def post_by_id_websocket(
     websocket: WebSocket, id: int, db: Session = Depends(get_db)
 ):
-    await provider.connect(
-        websocket, connection_type=ConnectionType.SPECIFIC_POST_CONNECTION
-    )
+    connection = Connection(websocket=websocket, params=Params(id=id))
+    await provider.connect(connection=connection)
     try:
         while True:
             post = crud.get_post(db=db, post_id=id)
@@ -114,12 +77,10 @@ async def post_by_id_websocket(
             }
             _json = jsonable_encoder(postJson)
             await websocket.send_json(_json)
-            await asyncio.sleep(50)
+            await asyncio.sleep(30)
 
     except WebSocketDisconnect:
-        provider.remove(
-            websocket, connection_type=ConnectionType.SPECIFIC_POST_CONNECTION
-        )
+        provider.remove(connection=connection)
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)

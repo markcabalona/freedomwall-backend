@@ -1,137 +1,103 @@
+from ast import Param
 from enum import Enum
-from typing import Optional, List
+from sqlite3 import connect
+from typing import Optional, List, Tuple
 
 # from fastapi import Depends
 from sqlalchemy.orm import Session
 from fastapi.encoders import jsonable_encoder
 
 from starlette.websockets import WebSocket
+import websockets
 from .parameters import Params
 from .. import crud
 
 
-class ConnectionType(Enum):
-    ALL_POSTS_CONNECTION = 1
-    SPECIFIC_POST_CONNECTION = 2
-    FILTERED_POST_CONNECTION = 3
+class Connection:
+    def __init__(self, websocket: WebSocket, params: Optional[Params] = None):
+        self.websocket = websocket
+        self.params = params
 
 
 class Provider:
     def __init__(self):
-        self.all_post_connections: List[WebSocket] = []
-        self.specific_post_connections: List[WebSocket] = []
-        self.filtered_post_connections: List[WebSocket] = []
+        self.connections: List[Connection] = []
         self.generator = self.get_notification_generator()
 
     def __del__(self):
-        for connection in self.all_post_connections:
+        for connection in self.connections:
             self.remove(
                 websocket=connection,
-                connection_type=ConnectionType.ALL_POSTS_CONNECTION,
-            )
-        for connection in self.filtered_post_connections:
-            self.remove(
-                websocket=connection,
-                connection_type=ConnectionType.FILTERED_POST_CONNECTION,
-            )
-        for connection in self.specific_post_connections:
-            self.remove(
-                websocket=connection,
-                connection_type=ConnectionType.SPECIFIC_POST_CONNECTION,
             )
 
     async def get_notification_generator(self):
         while True:
             notify_params = yield
-            await self._notify(db=notify_params[0], params=notify_params[1])
+            await self._notify(db=notify_params)
 
-    async def push(self, db: Session, params: Optional[Params] = None):
-        await self.generator.asend((db, params))
+    async def push(self, db: Session):
+        await self.generator.asend(db)
 
-    async def connect(self, websocket: WebSocket, connection_type: ConnectionType):
-        await websocket.accept()
-        if connection_type is ConnectionType.ALL_POSTS_CONNECTION:
-            self.all_post_connections.append(websocket)
-        elif connection_type is ConnectionType.SPECIFIC_POST_CONNECTION:
-            self.specific_post_connections.append(websocket)
-        else:
-            self.filtered_post_connections.append(websocket)
+    async def connect(self, connection: Connection):
+        await connection.websocket.accept()
+        self.connections.append(connection)
 
-    def remove(self, websocket: WebSocket, connection_type: ConnectionType):
-        if connection_type is ConnectionType.ALL_POSTS_CONNECTION:
-            self.all_post_connections.remove(websocket)
-        elif connection_type is ConnectionType.SPECIFIC_POST_CONNECTION:
-            self.specific_post_connections.remove(websocket)
-        else:
-            self.filtered_post_connections.remove(websocket)
+    def remove(self, connection: Connection):
+        connection.websocket.close()
+        self.connections.remove(connection)
 
-    async def _notify(self, db: Session, params: Params):
-        await self._notify_all_posts(db=db)
-        await self._notify_specific_posts(db=db, post_id=params.id)
-        await self._notify_filtered_posts(db=db, params=params)
-
-    async def _notify_all_posts(self, db: Session):
-        response = crud.get_all_posts(db=db, creator=None, title=None)
-        postsJson = []
-        try:
-            for post in response:
-                db.refresh(post)
-                postsJson.append(
-                    {
-                        "id": post.id,
-                        "creator": post.creator,
-                        "title": post.title,
-                        "content": post.content,
-                        "date_created": post.date_created,
-                        "likes": post.likes,
-                        "dislikes": post.dislikes,
-                        "comments": [comment.__dict__ for comment in post.comments],
-                    }
+    async def _notify(self, db: Session):
+        response
+        for connection in self.connections:
+            if connection.params == None:
+                response = crud.get_all_posts(db=db, creator=None, title=None)
+            elif connection.params.id == None:
+                response = crud.get_post(db=db, post_id=connection.params.id)
+            else:
+                response = crud.get_all_posts(
+                    db=db,
+                    creator=connection.params.creator,
+                    title=connection.params.title,
                 )
-        finally:
-            _json = jsonable_encoder(postsJson)
-            for connection in self.all_post_connections:
-                await connection.send_json(_json)
+            if response is List:
+                postsJson = []
+                try:
+                    for post in response:
+                        db.refresh(post)
+                        postsJson.append(
+                            {
+                                "id": post.id,
+                                "creator": post.creator,
+                                "title": post.title,
+                                "content": post.content,
+                                "date_created": post.date_created,
+                                "likes": post.likes,
+                                "dislikes": post.dislikes,
+                                "comments": [
+                                    comment.__dict__ for comment in post.comments
+                                ],
+                            }
+                        )
+                finally:
+                    _json = jsonable_encoder(postsJson)
+                    await connection.send_json(_json)
 
-    async def _notify_specific_posts(self, db: Session, post_id: int):
-        response = crud.get_post(db=db, post_id=post_id)
-        db.refresh(response)
-        postJson = {
-            "id": response.id,
-            "creator": response.creator,
-            "title": response.title,
-            "content": response.content,
-            "date_created": response.date_created,
-            "likes": response.likes,
-            "dislikes": response.dislikes,
-            "comments": [comment.__dict__ for comment in response.comments],
-        }
-        _json = jsonable_encoder(postJson)
-        for connection in self.specific_post_connections:
-            await connection.send_json(_json)
-
-    async def _notify_filtered_posts(self, db: Session, params: Params):
-        response = crud.get_all_posts(db=db, creator=params.creator, title=params.title)
-        postsJson = []
-        try:
-            for post in response:
-                db.refresh(post)
-                postsJson.append(
-                    {
-                        "id": post.id,
-                        "creator": post.creator,
-                        "title": post.title,
-                        "content": post.content,
-                        "date_created": post.date_created,
-                        "likes": post.likes,
-                        "dislikes": post.dislikes,
-                        "comments": [comment.__dict__ for comment in post.comments],
+            else:
+                try:
+                    db.refresh(response)
+                    postJson = {
+                        "id": response.id,
+                        "creator": response.creator,
+                        "title": response.title,
+                        "content": response.content,
+                        "date_created": response.date_created,
+                        "likes": response.likes,
+                        "dislikes": response.dislikes,
+                        "comments": [comment.__dict__ for comment in response.comments],
                     }
-                )
-        finally:
-            _json = jsonable_encoder(postsJson)
-            for connection in self.filtered_post_connections:
-                await connection.send_json(_json)
+                finally:
+                    _json = jsonable_encoder(postJson)
+                    await connection.send_json(_json)
 
 
 provider = Provider()
