@@ -5,13 +5,12 @@ from sqlalchemy.orm import Session
 from fastapi.encoders import jsonable_encoder
 
 from starlette.websockets import WebSocket
-import websockets
 from .parameters import Params
 from .. import crud
 
 
 class Connection:
-    def __init__(self, websocket: WebSocket, params: Optional[Params] = None):
+    def __init__(self, websocket: WebSocket, params: Params):
         self.websocket = websocket
         self.params = params
 
@@ -20,6 +19,7 @@ class Provider:
     def __init__(self):
         self.connections: List[Connection] = []
         self.generator = self.get_notification_generator()
+
 
     def __del__(self):
         for connection in self.connections:
@@ -32,30 +32,31 @@ class Provider:
             notify_params = yield
             await self._notify(db=notify_params)
 
+
     async def push(self, db: Session):
-        self.generator.asend(db)
+        await self.generator.asend(db)
 
     async def connect(self, connection: Connection):
         await connection.websocket.accept()
         self.connections.append(connection)
 
-    def remove(self, connection: Connection):
-        connection.websocket.close()
+    async def remove(self, connection: Connection):
+        await connection.websocket.close()
         self.connections.remove(connection)
 
     async def _notify(self, db: Session):
+        print("Total Connectons: ", end="")
+        print(len(self.connections))
         for connection in self.connections:
-            if connection.params == None:
-                response = crud.get_all_posts(db=db, creator=None, title=None)
-            elif connection.params.id == None:
-                response = crud.get_post(db=db, post_id=connection.params.id)
-            else:
+
+            print(connection.websocket.state)
+            print(connection.params)
+            if not connection.params.id:
                 response = crud.get_all_posts(
                     db=db,
                     creator=connection.params.creator,
                     title=connection.params.title,
                 )
-            if response is List:
                 postsJson = []
                 try:
                     for post in response:
@@ -77,8 +78,8 @@ class Provider:
                 finally:
                     _json = jsonable_encoder(postsJson)
                     await connection.websocket.send_json(_json)
-
             else:
+                response = crud.get_post(db=db, post_id=connection.params.id)
                 try:
                     db.refresh(response)
                     postJson = {

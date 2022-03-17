@@ -31,6 +31,7 @@ async def websocket_endpoint(
     await provider.connect(connection=connection)
     try:
         while True:
+            await websocket.receive_text()
             posts = crud.get_all_posts(db, creator=creator, title=title)
             postsJson = []
             for post in posts:
@@ -49,10 +50,9 @@ async def websocket_endpoint(
                 )
             _json = jsonable_encoder(postsJson)
             await websocket.send_json(_json)
-            await asyncio.sleep(30)
 
     except WebSocketDisconnect:
-        provider.remove(connection=connection)
+        await provider.remove(connection=connection)
 
 
 @router.websocket("/ws/post/{id}")
@@ -63,6 +63,7 @@ async def post_by_id_websocket(
     await provider.connect(connection=connection)
     try:
         while True:
+            await websocket.receive_text()
             post = crud.get_post(db=db, post_id=id)
             db.refresh(post)
             postJson = {
@@ -77,10 +78,9 @@ async def post_by_id_websocket(
             }
             _json = jsonable_encoder(postJson)
             await websocket.send_json(_json)
-            await asyncio.sleep(30)
 
     except WebSocketDisconnect:
-        provider.remove(connection=connection)
+        await provider.remove(connection=connection)
 
 
 @router.post("/", status_code=status.HTTP_201_CREATED)
