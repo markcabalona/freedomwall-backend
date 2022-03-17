@@ -87,7 +87,6 @@ async def post_by_id_websocket(
 async def create_post(request: schemas.PostCreate, db: Session = Depends(get_db)):
     response = crud.create_post(db=db, post=request)
     await provider.push(
-        params=Params(id=response.id),
         db=db,
     )
     return response
@@ -98,7 +97,7 @@ async def like_or_dislike_post(
     id: int, action: crud.Action, db: Session = Depends(get_db)
 ):
     response = crud.like_dislike_post(db=db, action=action, post_id=id)
-    await provider.push(db=db, params=Params(id=id))
+    await provider.push(db=db)
     return response
 
 
@@ -111,7 +110,7 @@ async def create_comment(
     request: schemas.CommentCreate, post_id: int, db: Session = Depends(get_db)
 ):
     comment = crud.create_comment(db, request, post_id)
-    await provider.push(db=db, params=Params(id=post_id))
+    await provider.push(db=db)
     return comment
 
 
