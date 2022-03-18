@@ -20,13 +20,6 @@ class Provider:
         self.connections: List[Connection] = []
         self.generator = self.get_notification_generator()
 
-
-    def __del__(self):
-        for connection in self.connections:
-            self.remove(
-                connection=connection,
-            )
-
     async def get_notification_generator(self):
         while True:
             notify_params = yield
@@ -95,6 +88,3 @@ class Provider:
                 finally:
                     _json = jsonable_encoder(postJson)
                     await connection.websocket.send_json(_json)
-
-
-provider = Provider()

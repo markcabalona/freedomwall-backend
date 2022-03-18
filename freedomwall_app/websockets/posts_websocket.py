@@ -1,8 +1,6 @@
 from typing import Optional
 
 
-import asyncio
-
 from fastapi import APIRouter, Depends, status
 from fastapi.encoders import jsonable_encoder
 
@@ -11,11 +9,13 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from .. import crud, database, schemas
 from .parameters import Params
-from .provider import Connection, provider
+from .provider import Connection, Provider
 
 router = APIRouter(prefix="/post", tags=["Posts"])
 
 get_db = database.get_db
+
+provider = Provider()
 
 
 @router.websocket("/ws")
@@ -31,7 +31,7 @@ async def websocket_endpoint(
     await provider.connect(connection=connection)
     try:
         while True:
-            await websocket.receive_text()
+            print(await websocket.receive_text())
             posts = crud.get_all_posts(db, creator=creator, title=title)
             postsJson = []
             for post in posts:
@@ -63,7 +63,7 @@ async def post_by_id_websocket(
     await provider.connect(connection=connection)
     try:
         while True:
-            await websocket.receive_text()
+            print(await websocket.receive_text())
             post = crud.get_post(db=db, post_id=id)
             db.refresh(post)
             postJson = {
