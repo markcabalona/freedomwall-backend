@@ -40,10 +40,9 @@ class Provider:
     async def _notify(self, db: Session):
         print("Total Connectons: ", end="")
         print(len(self.connections))
-        for connection in self.connections:
-
-            print(connection.websocket.state)
-            print(connection.params)
+        living_connections = []
+        while len(self.connections) > 0:
+            connection = self.connections.pop()
             if not connection.params.id:
                 response = crud.get_all_posts(
                     db=db,
@@ -88,3 +87,7 @@ class Provider:
                 finally:
                     _json = jsonable_encoder(postJson)
                     await connection.websocket.send_json(_json)
+
+            living_connections.append(connection)
+
+        self.connections = living_connections
