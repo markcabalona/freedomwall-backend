@@ -1,4 +1,4 @@
 .gitignore
 .vscode
-# data.db/
+data.db
 /freedomwall_app/__pycache__/*
