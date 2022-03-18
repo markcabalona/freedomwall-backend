@@ -1,4 +1,4 @@
 .gitignore
 .vscode
-data.db
-/freedomwall_app/routers/websocket.py
+# data.db/
+/freedomwall_app/__pycache__/*
